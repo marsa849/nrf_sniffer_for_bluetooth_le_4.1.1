@@ -36,10 +36,11 @@
 
 import time
 from SnifferAPI import Sniffer, UART
-
+from datetime import datetime
 nPackets = 0
 mySniffer = None
 
+buffer=[]
 def setup():
     global mySniffer
     
@@ -60,18 +61,7 @@ def setup():
     # Scan for new advertisers
     mySniffer.scan()
 
-    # Wait to allow the sniffer to discover device mySniffer.
-    time.sleep(5)
-    # Retrieve list of discovered devicemySniffer.
-    d = mySniffer.getDevices()
-    # Find device with name "Example".
-    dev = d.find('Example')
-    
-    if dev is not None:
-        # Follow (sniff) device "Example". This call sends a REQ_FOLLOW command over UART.
-        mySniffer.follow(dev)
-    else:
-        print("Could not find device")
+
 
 def loop():
     # Enter main loop
@@ -84,21 +74,25 @@ def loop():
         processPackets(packets) # function defined below
         
         nLoops += 1
-        
+
         # print diagnostics every so often
-        if nLoops % 20 == 0:
-            print(mySniffer.getDevices())
-            print("inConnection", mySniffer.inConnection)
-            print("currentConnectRequest", mySniffer.currentConnectRequest)
-            print("packetsInLastConnection", mySniffer.packetsInLastConnection)
-            print("nPackets", nPackets)
-            print()
+        if nLoops % 10 == 0:
+            global buffer
+            for i in buffer:
+                PKTtime = datetime.fromtimestamp(i.time)
+                print(PKTtime, i.blePacket.payload)
+                #print(i.__dict__)
+            buffer = []
         
 # Takes list of packets
 def processPackets(packets):
+    global buffer
     for packet in packets:
         # packet is of type Packet
         # packet.blePacket is of type BlePacket
+        if packet.blePacket:
+            if packet.RSSI > -50:
+                buffer.append(packet)
         global nPackets
         # if packet.OK:
         # Counts number of packets which are not malformed.
