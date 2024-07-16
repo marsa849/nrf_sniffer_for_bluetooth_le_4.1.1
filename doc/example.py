@@ -59,11 +59,13 @@ def setup():
     # Start the sniffer module. This call is mandatory.
     mySniffer.start()
     # Scan for new advertisers
-    mySniffer.scan()
+    mySniffer.scan(findScanRsp = False)
 
 
+last_time = 0
 
 def loop():
+    global last_time
     # Enter main loop
     nLoops = 0
     while True:
@@ -80,19 +82,31 @@ def loop():
             global buffer
             for i in buffer:
                 PKTtime = datetime.fromtimestamp(i.time)
-                print(PKTtime, i.blePacket.payload)
+                print(PKTtime, i.RSSI, i.blePacket.advAddress, i.channel,[hex(num) for num in i.blePacket.payload][0:8],' '*10,  i.time - last_time)
+                last_time = i.time
+                #print(i.blePacket.__dict__)
                 #print(i.__dict__)
             buffer = []
-        
+
+dict_mac={}
 # Takes list of packets
 def processPackets(packets):
     global buffer
+    global dict_mac
     for packet in packets:
         # packet is of type Packet
         # packet.blePacket is of type BlePacket
+
         if packet.blePacket:
-            if packet.RSSI > -50:
-                buffer.append(packet)
+            if packet.RSSI > -40:
+
+                key = ''.join(format(x, '02X') for x in packet.blePacket.advAddress)
+                if key not in dict_mac:
+                    buffer.append(packet)
+                elif packet.time - dict_mac[key] > 0.012:
+                    buffer.append(packet)
+                dict_mac[key] = packet.time
+                
         global nPackets
         # if packet.OK:
         # Counts number of packets which are not malformed.
